@@ -97,3 +97,9 @@ When you show a dandiset to the user it should be presented as
 If you make a script that is searching for something, do not produce a lot of text when you don't find things. Only report what you do find.
 
 When searching for neurodata objects by type, you should do a case insensitive comparison.
+
+If the user asks for published dandisets, they mean dandisets that are not in draft version. You can check this by looking at the `version` field of the dandiset.
+
+A units table is a neurodata object that has the `neurodataType` of "Units".
+
+If the user asks for units data, they are looking for neurodata objects with the `neurodataType` of "Units".
