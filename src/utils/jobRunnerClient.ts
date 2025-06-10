@@ -19,6 +19,7 @@ export class JobRunnerClient {
   private pendingJobs = new Map<string, {
     resolve: (value: string) => void;
     reject: (error: Error) => void;
+    onAccepted?: () => void;
   }>();
 
   constructor() {
@@ -68,6 +69,7 @@ export class JobRunnerClient {
 
     switch (response.status) {
       case 'accepted':
+        if (pendingJob.onAccepted) pendingJob.onAccepted();
         break;
       case 'completed':
         this.pendingJobs.delete(response.jobId);
@@ -89,9 +91,25 @@ export class JobRunnerClient {
     };
 
     return new Promise((resolve, reject) => {
+      let acceptedReceived = false;
+      let timeoutId: NodeJS.Timeout | undefined = undefined;
+
+      const onAccepted = () => {
+        acceptedReceived = true;
+        if (timeoutId) clearTimeout(timeoutId);
+      };
+
+      timeoutId = setTimeout(() => {
+        if (!acceptedReceived) {
+          this.pendingJobs.delete(jobId);
+          reject(new Error('Failed to submit script. The job runner is probably offline.'));
+        }
+      }, 3000);
+
       this.pendingJobs.set(jobId, {
         resolve,
         reject,
+        onAccepted
       });
 
       this.pubnub

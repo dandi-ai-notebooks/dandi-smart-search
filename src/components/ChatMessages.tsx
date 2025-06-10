@@ -1,4 +1,3 @@
-import ReactMarkdown from 'react-markdown'
 import type { FormEvent } from 'react'
 import type { ChatMessage } from '../types'
 import MarkdownContent from './MarkdownContent'
