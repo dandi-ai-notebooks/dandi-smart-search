@@ -315,7 +315,7 @@ class DandiInterfaceNwbFile {
   ) {
   }
   getNeurodataObjects = async (): Promise<DandiInterfaceNeurodataObject[]> => {
-    const fname = `data/dandisets/${this.dandiset_id}/assets.v4/${this.asset_id}.json`;
+    const fname = `data/dandisets/${this.dandiset_id}/assets.v7/${this.asset_id}.json`;
     if (!fs.existsSync(fname)) {
       // maybe it wasn't created yet
       return [];

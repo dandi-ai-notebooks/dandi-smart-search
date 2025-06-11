@@ -91,6 +91,7 @@ const objects = await nwbFile.getNeurodataObjects();
 Each neurodata object will have the following fields:
 - `path`: The path to the neurodata object within the NWB file.
 - `neurodataType`: The type of the neurodata object (e.g., "ProcessingModule", "Epochs", "Units").
+- `description`: A description of the neurodata object.
 
 Your script should not output a huge amount of text, but should summarize the results in a concise manner appropriate to the conversation.
 

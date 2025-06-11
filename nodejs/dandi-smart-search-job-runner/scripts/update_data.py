@@ -203,7 +203,7 @@ def update_data():
             print(f"Skipping {dandiset_id} update")
             with open(dandiset_fname, 'r') as f:
                 dandiset_data = json.load(f)
-        for vvv0 in ['v1', 'v2', 'v3', 'v5', 'v6']:
+        for vvv0 in ['v1', 'v2', 'v3', 'v4', 'v5', 'v6']:
             # remove old asset info files
             asset_dir0 = f'{dandiset_data_dir}/assets.{vvv0}'
             if os.path.exists(asset_dir0):
