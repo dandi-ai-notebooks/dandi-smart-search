@@ -4,7 +4,7 @@ import type { ChatMessage } from "../types";
 import { processMessage } from "../utils/processMessage";
 import { AVAILABLE_MODELS } from "../utils/availableModels";
 
-const model = "google/gemini-2.5-flash-preview-05-20"
+const model = "google/gemini-2.0-flash-001"
 // const model = "anthropic/claude-sonnet-4";
 // const model = "google/gemini-2.5-pro-preview";
 
