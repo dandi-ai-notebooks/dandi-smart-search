@@ -82,7 +82,8 @@ def _load_neurodata_objects_from_group(group: h5py.Group, visited):
             if obj.attrs.get('neurodata_type', None):
                 neurodata_objects.append({
                     'path': obj.name,
-                    'type': obj.attrs['neurodata_type']
+                    'type': obj.attrs['neurodata_type'],
+                    'description': obj.attrs.get('description', '')
                 })
             if not visited.get(obj.name, False):
                 neurodata_objects.extend(_load_neurodata_objects_from_group(obj, visited))
@@ -104,8 +105,30 @@ def _load_asset_info(*, dandiset_id: str, asset_id: str):
     return {
         'dandiset_id': dandiset_id,
         'asset_id': asset_id,
-        'neurodata_objects': neurodata_objects
+        'neurodata_objects': neurodata_objects,
+        'session_description': _str(f['session_description'][()]),  # type: ignore
+        'subject': {
+            'age': _str(f['general/subject']['age'][()]) if 'general/subject/age' in f else None,  # type: ignore
+            'genotype': _str(f['general/subject']['genotype'][()]) if 'general/subject/genotype' in f else None,  # type: ignore
+            'sex': _str(f['general/subject']['sex'][()]) if 'general/subject/sex' in f else None,  # type: ignore
+            'species': _str(f['general/subject']['species'][()]) if 'general/subject/species' in f else None,  # type: ignore
+            'subject_id': _str(f['general/subject']['subject_id'][()]) if 'general/subject/subject_id' in f else None,  # type: ignore
+            'strain': _str(f['general/subject']['strain'][()]) if 'general/subject/strain' in f else None,  # type: ignore
+            'specimen_name': _str(f['general/subject']['specimen_name'][()]) if 'f/general/subject/specimen_name' in f else None,  # type: ignore
+        }
     }
+
+def _str(value):
+    if isinstance(value, bytes):
+        return value.decode('utf-8', errors='ignore')
+    elif isinstance(value, (list, tuple)):
+        return [_str(v) for v in value]
+    elif isinstance(value, dict):
+        return _serialize_attributes(value)
+    elif isinstance(value, (int, float, str)):
+        return str(value)
+    else:
+        return str(value)
 
 def _fetch_dandiset_metadata(*, dandiset_id: str, version: str):
     url = f'https://api.dandiarchive.org/api/dandisets/{dandiset_id}/versions/{version}/'
@@ -180,7 +203,7 @@ def update_data():
             print(f"Skipping {dandiset_id} update")
             with open(dandiset_fname, 'r') as f:
                 dandiset_data = json.load(f)
-        for vvv0 in ['v1', 'v2', 'v3']:
+        for vvv0 in ['v1', 'v2', 'v3', 'v5', 'v6']:
             # remove old asset info files
             asset_dir0 = f'{dandiset_data_dir}/assets.{vvv0}'
             if os.path.exists(asset_dir0):
@@ -189,23 +212,23 @@ def update_data():
                     if fname.endswith('.json'):
                         os.remove(os.path.join(asset_dir0, fname))
                 os.rmdir(asset_dir0)
-        vvv = 'v4'
-        # for nwb_file in dandiset_data['nwb_files'][:100]:
-        #     asset_id = nwb_file['asset_id']
-        #     asset_fname = f'{dandiset_data_dir}/assets.{vvv}/{asset_id}.json'
-        #     asset_path = nwb_file['path']
-        #     if not os.path.exists(asset_fname):
-        #         print(f"{dandiset_id}: Loading asset info for {asset_path}")
-        #         if not os.path.exists(f'{dandiset_data_dir}/assets.{vvv}'):
-        #             os.makedirs(f'{dandiset_data_dir}/assets.{vvv}')
-        #         asset_info = _load_asset_info(dandiset_id=dandiset_id, asset_id=asset_id)
-        #         with open(asset_fname, 'w') as f:
-        #             json.dump(asset_info, f, indent=2)
-        #     else:
-        #         print(f"{dandiset_id}: Asset info for {asset_path} already exists")
-        #     if time.time() - start_time > 15:
-        #         print(f"Time limit reached for dandiset {dandiset_id}, moving to next")
-        #         break
+        vvv = 'v7'
+        for nwb_file in dandiset_data['nwb_files'][:20]:
+            asset_id = nwb_file['asset_id']
+            asset_fname = f'{dandiset_data_dir}/assets.{vvv}/{asset_id}.json'
+            asset_path = nwb_file['path']
+            if not os.path.exists(asset_fname):
+                print(f"{dandiset_id}: Loading asset info for {asset_path}")
+                if not os.path.exists(f'{dandiset_data_dir}/assets.{vvv}'):
+                    os.makedirs(f'{dandiset_data_dir}/assets.{vvv}')
+                asset_info = _load_asset_info(dandiset_id=dandiset_id, asset_id=asset_id)
+                with open(asset_fname, 'w') as f:
+                    json.dump(asset_info, f, indent=2)
+            else:
+                print(f"{dandiset_id}: Asset info for {asset_path} already exists")
+            if time.time() - start_time > 15:
+                print(f"Time limit reached for dandiset {dandiset_id}, moving to next")
+                break
 
 if __name__ == '__main__':
     update_data()

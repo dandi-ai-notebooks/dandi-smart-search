@@ -138,7 +138,27 @@ export class JobRunner {
       channel: this.responseChannel,
       message
     };
-    await this.pubnub.publish(publishPayload);
+    const numRetries = 4;
+    let tryNumber = 1;
+    let retryDelay = 2000;
+    while (tryNumber <= numRetries) {
+      try {
+        await this.pubnub.publish(publishPayload);
+        break;
+      }
+      catch (err) {
+        console.warn("Problem publishing payload", err);
+        if (tryNumber < numRetries) {
+          console.info(`Retrying to send response for job ${message.jobId} (attempt ${tryNumber})`);
+          await new Promise(resolve => setTimeout(resolve, retryDelay));
+          retryDelay *= 2; // Exponential backoff
+          tryNumber++;
+        }
+        else {
+          throw new Error(`Failed to send response for job ${message.jobId} after ${numRetries} attempts`);
+        }
+      }
+    }
   }
 
   async stop() {

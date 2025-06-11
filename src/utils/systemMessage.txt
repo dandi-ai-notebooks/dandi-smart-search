@@ -29,6 +29,8 @@ metadata = await dandiset.getDandisetMetadata();
 - metadata.keywords: string[]
 - metadata.citation: string
 - metadata.license: string
+- metadata.assetsSummary.numberOfBytes: number
+- metadata.assetsSummary.numberOfFiles: number
 
 Or you can filter by lexical search terms separated by spaces:
 
@@ -65,6 +67,14 @@ The NWB files will have the following fields:
 - `path`: The path to the NWB file within the dandiset.
 - `size`: The size of the NWB file in bytes.
 - `asset_id`: The unique identifier for the NWB file asset.
+- `session_description`: A description of the session in the NWB file.
+- `subject.age`: The age of the subject in the NWB file.
+- `subject.sex`: The sex of the subject in the NWB file.
+- `subject.genotype`: The genotype of the subject in the NWB file.
+- `subject.species`: The species of the subject in the NWB file.
+- `subject.subject_id`: The subject ID in the NWB file.
+- `subject.strain`: The strain of the subject in the NWB file (if available).
+- `subject.specimen_name`: The specimen name of the subject in the NWB file (if available).
 
 You can use the asset ID to make a link to the NWB file on neurosift via:
 [path](https://neurosift.app/nwb?url=https://api.dandiarchive.org/api/assets/[asset_id]/download/&dandisetId=[dandiset_id]&dandisetVersion=[dandiset_version])

@@ -293,7 +293,14 @@ class DandiInterfaceDandiset {
     } catch (error) {
       throw new Error(`Failed to parse JSON from ${dandisetFname}: ${error}`);
     }
-    return dandisetData.metadata;
+    const ret = dandisetData.metadata;
+    // intentionally hide some of the assetsSummary fields so we don't bias the AI classifications
+    ret.assetsSummary.species = [];
+    ret.assetsSummary.approach = [];
+    ret.assetsSummary.dataStandard = [];
+    ret.assetsSummary.measurementTechnique = [];
+    ret.assetsSummary.variableMeasured = [];
+    return ret;
   }
 }
 
@@ -373,8 +380,19 @@ export function createScriptInterface(onStatusUpdate: (status: string) => void):
   const dandiInterface = new DandiInterface({onStatusUpdate});
 
   return {
-    print: (text: string) => {
-      outputBuffer += text + "\n";
+    print: (text: string | any) => {
+      let v = "";
+      if (typeof text === 'string') {
+        v = text;
+      }
+      else {
+        try {
+          v = JSON.stringify(text, null, 2);
+        } catch (e) {
+          v = `Error stringifying object: ${e}`;
+        }
+      }
+      outputBuffer += v + "\n";
       onStatusUpdate(text);
     },
     _getOutput: () => outputBuffer,

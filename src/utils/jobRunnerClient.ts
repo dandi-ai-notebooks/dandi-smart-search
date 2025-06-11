@@ -104,7 +104,7 @@ export class JobRunnerClient {
           this.pendingJobs.delete(jobId);
           reject(new Error('Failed to submit script. The job runner is probably offline.'));
         }
-      }, 3000);
+      }, 10000);
 
       this.pendingJobs.set(jobId, {
         resolve,

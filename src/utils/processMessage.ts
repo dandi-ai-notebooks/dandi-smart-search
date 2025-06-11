@@ -39,7 +39,7 @@ export async function processMessage(
   messageHistory: ChatMessage[] = [],
   onStatusUpdate: (status: string) => void,
   model: string
-): Promise<string> {
+): Promise<{response: string, inputTokens: number, outputTokens: number}> {
   const messages: ORMessage[] = [
     {
       role: "system",
@@ -82,6 +82,8 @@ export async function processMessage(
     }
   ]
 
+  let inputTokens = 0;
+  let outputTokens = 0;
   while (true) {
     onStatusUpdate("Processing...");
     const response = await fetchCompletion({
@@ -103,6 +105,10 @@ export async function processMessage(
     if (!("message" in choice)) {
       throw new Error("Invalid response from model");
     }
+
+    inputTokens += response.usage?.prompt_tokens || 0;
+    outputTokens += response.usage?.completion_tokens || 0;
+    console.info(`Tokens for completion: Input: ${inputTokens}, Output: ${outputTokens}`);
 
     const msg = choice.message;
 
@@ -167,6 +173,6 @@ export async function processMessage(
     onStatusUpdate("Received response from model");
     console.info("Response from model:");
     console.info(msg.content);
-    return msg.content;
+    return {response: msg.content, inputTokens, outputTokens};
   }
 }
