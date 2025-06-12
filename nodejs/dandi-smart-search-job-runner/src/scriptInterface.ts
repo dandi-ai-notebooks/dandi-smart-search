@@ -230,7 +230,7 @@ class DandiInterfaceDandiset {
     public star_count: number
   ) {
   }
-  async getNwbFiles(): Promise<DandiInterfaceNwbFile[]> {
+  get nwbFiles(): DandiInterfaceNwbFile[] {
     const dandisetFname = `data/dandisets/${this.dandiset_id}/dandiset.json`;
     if (!fs.existsSync(dandisetFname)) {
       throw new Error(`Dandiset file not found: ${dandisetFname}`);
@@ -269,7 +269,7 @@ class DandiInterfaceDandiset {
       nwb.asset_id
     ));
   }
-  async getDandisetMetadata(): Promise<DandisetMetadata> {
+  dandisetMetadata(): DandisetMetadata {
     const dandisetFname = `data/dandisets/${this.dandiset_id}/dandiset.json`;
     if (!fs.existsSync(dandisetFname)) {
       throw new Error(`Dandiset metadata file not found: ${dandisetFname}`);
@@ -305,6 +305,25 @@ class DandiInterfaceDandiset {
 }
 
 class DandiInterfaceNwbFile {
+  private assetData: {
+    dandiset_id: string;
+    asset_id: string;
+    session_description: string;
+    subject: {
+      age: string;
+      sex: string;
+      genotype: string;
+      species: string;
+      subject_id: string;
+      strain?: string;
+      specimen_name?: string;
+    };
+    neurodata_objects: {
+      path: string;
+      type: string;
+      description: string;
+    }[];
+  } | undefined;
   constructor(
     public dandiInterface: DandiInterface,
     public dandiset_id: string,
@@ -314,36 +333,59 @@ class DandiInterfaceNwbFile {
     public asset_id: string
   ) {
   }
-  getNeurodataObjects = async (): Promise<DandiInterfaceNeurodataObject[]> => {
+
+  _loadAssetData = () => {
+    if (this.assetData) return;
     const fname = `data/dandisets/${this.dandiset_id}/assets.v7/${this.asset_id}.json`;
     if (!fs.existsSync(fname)) {
-      // maybe it wasn't created yet
-      return [];
+      return
     }
     const fileContent = fs.readFileSync(fname, 'utf8');
-    let assetData: {
-      dandiset_id: string;
-      asset_id: string;
-      neurodata_objects: {
-        path: string;
-        type: string;
-      }[];
-    }
     try {
-      assetData = JSON.parse(fileContent);
-    } catch (error) {
+      this.assetData = JSON.parse(fileContent);
+    }
+    catch (error) {
       throw new Error(`Failed to parse JSON from ${fname}: ${error}`);
     }
-    if (assetData.dandiset_id !== this.dandiset_id || assetData.asset_id !== this.asset_id) {
-      throw new Error(`Asset ID or dandiset ID mismatch: expected ${this.dandiset_id}/${this.asset_id}, got ${assetData.dandiset_id}/${assetData.asset_id}`);
+    if (!this.assetData) {
+      throw new Error(`Asset data is empty for ${fname}`);
     }
-    return assetData.neurodata_objects.map(no => new DandiInterfaceNeurodataObject({
+    if (this.assetData.dandiset_id !== this.dandiset_id || this.assetData.asset_id !== this.asset_id) {
+      throw new Error(`Asset ID or dandiset ID mismatch: expected ${this.dandiset_id}/${this.asset_id}, got ${this.assetData.dandiset_id}/${this.assetData.asset_id}`);
+    }
+    console.log('_loadAssetData', this.assetData.subject);
+  }
+
+  get neurodataObjects(): DandiInterfaceNeurodataObject[] {
+    this._loadAssetData();
+    if (!this.assetData) {
+      console.warn(`Asset data not loaded for ${this.dandiset_id}/${this.asset_id}`);
+      return []
+    }
+    return this.assetData.neurodata_objects.map(no => new DandiInterfaceNeurodataObject({
       dandisetId: this.dandiset_id,
       version: this.version,
       assetId: this.asset_id,
       path: no.path,
       neurodataType: no.type,
+      description: no.description
     }));
+  }
+  get session_description(): string {
+    this._loadAssetData();
+    if (!this.assetData) {
+      console.warn(`Asset data not loaded for ${this.dandiset_id}/${this.asset_id}`);
+      return '';
+    }
+    return this.assetData.session_description || '';
+  }
+  get subject() {
+    this._loadAssetData();
+    if (!this.assetData) {
+      console.warn(`Asset data not loaded for ${this.dandiset_id}/${this.asset_id}`);
+      return {};
+    }
+    return this.assetData.subject || {};
   }
 }
 
@@ -355,6 +397,7 @@ class DandiInterfaceNeurodataObject {
       assetId: string,
       neurodataType: string,
       path: string,
+      description: string
     }
   ) {
   }
@@ -372,6 +415,9 @@ class DandiInterfaceNeurodataObject {
   }
   get path() {
     return this.o.path;
+  }
+  get description() {
+    return this.o.description;
   }
 }
 
