@@ -1,6 +1,5 @@
 import { fetchCompletion } from "../completion/fetchCompletion";
 import type { ORFunctionDescription, ORMessage, ORTool, ORToolCall } from "../completion/openRouterTypes";
-import type { ChatMessage } from "../types";
 import { JobRunnerClient } from "./jobRunnerClient";
 import systemMessageText from './systemMessage.txt?raw';
 
@@ -36,29 +35,18 @@ const openRouterKey =
 
 export async function processMessage(
   query: string,
-  messageHistory: ChatMessage[] = [],
+  messageHistory: ORMessage[] = [],
   onStatusUpdate: (status: string) => void,
-  model: string
-): Promise<{response: string, inputTokens: number, outputTokens: number}> {
+  model: string,
+  onMessagesUpdate?: (messages: ORMessage[]) => void,
+): Promise<{response: string, newMessages: ORMessage[], inputTokens: number, outputTokens: number}> {
   const messages: ORMessage[] = [
     {
       role: "system",
       content: systemMessageText
-    }
+    },
+    ...messageHistory
   ];
-  for (const msg of messageHistory) {
-    if (msg.role === "user") {
-      messages.push({
-        role: "user",
-        content: msg.content,
-      });
-    } else if (msg.role === "assistant") {
-      messages.push({
-        role: "assistant",
-        content: msg.content,
-      });
-    }
-  }
   messages.push({
     role: "user",
     content: query,
@@ -137,6 +125,9 @@ export async function processMessage(
         throw new Error(`Unsupported tool call function: ${toolCall.function.name}`);
       }
     }
+    if (msg.role !== "assistant") {
+      throw new Error(`Unexpected message role: ${msg.role}`);
+    }
 
     if (msg.role === "assistant" && "tool_calls" in msg && msg.tool_calls) {
       currentMessages = [
@@ -147,6 +138,9 @@ export async function processMessage(
           tool_calls: msg.tool_calls,
         }
       ];
+      if (onMessagesUpdate) {
+        onMessagesUpdate(currentMessages.slice(1));
+      }
       if (msg.tool_calls.length === 0) {
         throw new Error("tool_calls has length 0");
       }
@@ -160,19 +154,35 @@ export async function processMessage(
             tool_call_id: tc.id,
           }
         ]
+        if (onMessagesUpdate) {
+          onMessagesUpdate(currentMessages.slice(1));
+        }
       }
       // After processing all tool calls, continue to the next iteration
       continue;
     }
-    if (msg.role !== "assistant") {
-      throw new Error(`Unexpected message role: ${msg.role}`);
+    else {
+      if (!msg.content) {
+        throw new Error("No content in assistant message");
+      }
+      currentMessages = [
+        ...currentMessages,
+        {
+          role: "assistant",
+          content: msg.content,
+        }
+      ];
+      if (onMessagesUpdate) {
+        onMessagesUpdate(currentMessages.slice(1));
+      }
     }
+
     if (!msg.content) {
       throw new Error("No content in assistant message");
     }
     onStatusUpdate("Received response from model");
     console.info("Response from model:");
     console.info(msg.content);
-    return {response: msg.content, inputTokens, outputTokens};
+    return {response: msg.content, newMessages: currentMessages.slice(1), inputTokens, outputTokens};
   }
 }

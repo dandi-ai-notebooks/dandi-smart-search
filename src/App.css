@@ -188,6 +188,11 @@
   margin-right: auto;
 }
 
+.message.tool {
+  background-color: #c8ccc9;
+  margin: 0 auto;
+}
+
 .loading {
   padding: 1rem;
   color: #757575;

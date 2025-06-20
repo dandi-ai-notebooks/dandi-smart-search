@@ -1,9 +1,9 @@
-import type { FormEvent } from 'react'
-import type { ChatMessage } from '../types'
+import { useEffect, useRef, type FormEvent } from 'react'
 import MarkdownContent from './MarkdownContent'
+import type { ORMessage } from '../completion/openRouterTypes'
 
 interface ChatMessagesProps {
-  messages: ChatMessage[]
+  messages: ORMessage[]
   isLoading: boolean
   followUpQuery: string
   onFollowUpChange: (value: string) => void
@@ -19,6 +19,12 @@ export function ChatMessages({
   onFollowUpSubmit,
   status
 }: ChatMessagesProps) {
+  const messagesEndRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [messages, isLoading])
+
   if (messages.length === 0) return null
 
   return (
@@ -26,10 +32,10 @@ export function ChatMessages({
       {messages.map((message, index) => (
         <div
           key={index}
-          className={`message ${message.role === 'assistant' ? 'assistant' : 'user'}`}
+          className={`message ${message.role}`}
         >
           <MarkdownContent
-            content={message.content}
+            content={(message.content || 'no content') as string}
           />
         </div>
       ))}
@@ -50,6 +56,7 @@ export function ChatMessages({
           </button>
         </form>
       )}
+      <div ref={messagesEndRef} />
     </div>
   )
 }

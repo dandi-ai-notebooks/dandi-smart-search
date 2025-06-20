@@ -23,7 +23,7 @@ Each dandiset in the list has the following fields:
 The asset_count includes all files in the dandiset, not just the .nwb files.
 
 You can also retrieve the dandiset metadata (slightly more expensive operation)
-metadata = await dandiset.getDandisetMetadata();
+metadata = await dandiset.dandisetMetadata();
 - metadata.contributor: {name: string}[]
 - metadata.description: string
 - metadata.keywords: string[]
@@ -36,15 +36,6 @@ Or you can filter by lexical search terms separated by spaces:
 
 const searchTerms = "your search terms";
 const dandisets = await interface.findDandisets({ search: searchTerms });
-
-You can also perform a semantic search with natural language queries:
-
-const query = "A description of what you are looking for";
-const dandisets = await interface.findDandisets({ semanticSearch: query });
-This will return the most relevant dandisets in order of relevance to the query.
-
-You can also restrict the semantic search to particular dandisets:
-const dandisets = await interface.findDandisets({ semanticSearch: query, restrictToDandisets: ["000001", "000002"] });
 
 You can also get a specific dandiset by its ID:
 
@@ -95,7 +86,7 @@ Each neurodata object will have the following fields:
 
 Your script should not output a huge amount of text, but should summarize the results in a concise manner appropriate to the conversation.
 
-If your script produces too large of an output, the output will be truncated. If you see an "[output truncated]" message, you should pass that information on to the user if appropriate and relevant.
+You should limit the amount of text you produce by creating limits in the script, and then if surpassing those limits, printing an appropriate warning message.
 
 IMPORTANT: Only the first 100 nwb files for each Dandiset will be returned.
 
@@ -114,3 +105,50 @@ If the user asks for published dandisets, they mean dandisets that are not in dr
 A units table is a neurodata object that has the `neurodataType` of "Units".
 
 If the user asks for units data, they are looking for neurodata objects with the `neurodataType` of "Units".
+
+When you reply with search results, start by describing how you performed the search.
+
+Some examples:
+
+Prompt: Find dandisets where all of the participants are female.
+
+Script:
+
+const dandisets = await interface.getDandisets();
+let foundDandisets = [];
+for (const dandiset of dandisets) {
+  let allFemale = true;
+  let atLeastOneFemale = false;
+  const nwbFiles = dandiset.nwbFiles;
+  for (const f of nwbFiles) {
+    if (f.subject && f.subject.sex) {
+      if (f.subject.sex.toLowerCase() === 'f') {
+        atLeastOneFemale = true;
+      } else {
+        allFemale = false;
+        break;
+      }
+    }
+  }
+  if (allFemale && atLeastOneFemale) {
+     foundDandisets.push(dandiset);
+  }
+}
+
+if (foundDandisets.length > 0) {
+  let numPrinted = 0;
+  for (const dandiset of foundDandisets) {
+    interface.print(`- [${dandiset.dandiset_id}](https://dandiarchive.org/dandiset/${dandiset.dandiset_id}/${dandiset.version}) ${dandiset.name}`);
+    numPrinted++;
+    if (numPrinted >= 20) {
+      interface.print('... and more. Please refine your search for better results.');
+      break;
+    }
+  }
+} else {
+  interface.print('No dandisets found where all participants are female.');
+}
+
+Then when you are replying you would start by describing how you performed the search. Then you would list the dandisets that matched with links and titles. If there are more than 20 results, you would indicate that there are more results and suggest the user refine their search.
+
+If the user follows up with "select only those where there are at least 3 participants", then resubmit the entire script except make a list of all the unique subject IDs and check that the length of that list is at least 3.

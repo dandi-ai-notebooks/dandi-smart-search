@@ -1,15 +1,15 @@
 import { useEffect, useState } from "react";
 import type { FormEvent } from "react";
-import type { ChatMessage } from "../types";
 import { processMessage } from "../utils/processMessage";
 import { AVAILABLE_MODELS } from "../utils/availableModels";
+import type { ORMessage } from "../completion/openRouterTypes";
 
-const model = "google/gemini-2.0-flash-001"
-// const model = "anthropic/claude-sonnet-4";
+// const model = "google/gemini-2.0-flash-001"
+const model = "anthropic/claude-sonnet-4";
 // const model = "google/gemini-2.5-pro-preview";
 
 export function useChat() {
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [messages, setMessages] = useState<ORMessage[]>([]);
   const [mainQuery, setMainQuery] = useState("");
   const [followUpQuery, setFollowUpQuery] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -43,23 +43,20 @@ export function useChat() {
     setStatus("Searching DANDI archive...");
 
     try {
-      const { response, inputTokens, outputTokens } = await processMessage(
+      const { newMessages, inputTokens, outputTokens } = await processMessage(
         mainQuery,
         [],
         setStatus,
-        model
+        model,
+        (newMessages) => {
+          setMessages(newMessages);
+        }
       );
       setTokenUsage((prev) => ({
         inputTokens: prev.inputTokens + inputTokens,
         outputTokens: prev.outputTokens + outputTokens,
       }));
-      setMessages((prev) => [
-        ...prev,
-        {
-          role: "assistant",
-          content: response,
-        },
-      ]);
+      setMessages(newMessages);
       setMainQuery("");
     } finally {
       setStatus("");
@@ -76,23 +73,20 @@ export function useChat() {
     setStatus("Processing follow-up query...");
 
     try {
-      const { response, inputTokens, outputTokens } = await processMessage(
+      const { newMessages, inputTokens, outputTokens } = await processMessage(
         followUpQuery,
         messages,
         setStatus,
-        model
+        model,
+        (newMessages) => {
+          setMessages(newMessages);
+        }
       );
       setTokenUsage((prev) => ({
         inputTokens: prev.inputTokens + inputTokens,
         outputTokens: prev.outputTokens + outputTokens,
       }));
-      setMessages((prev) => [
-        ...prev,
-        {
-          role: "assistant",
-          content: response,
-        } as ChatMessage,
-      ]);
+      setMessages(newMessages);
       setFollowUpQuery("");
     } finally {
       setStatus("");
